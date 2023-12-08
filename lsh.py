@@ -22,11 +22,11 @@ class LSH:
         else:
             self.rng = np.random.default_rng()
 
-        self.projection_line = self._generate_plane()
+        self.projection_line = self._generate_line()
 
-    def _generate_plane(self):
+    def _generate_line(self):
         '''
-        Generate a random plane for projection.
+        Generate a random line for projection.
         '''
         return self.rng.standard_normal(self.input_dim)
     
