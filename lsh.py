@@ -66,6 +66,9 @@ class KNN:
         self.l = l
         self.g_list = []
 
+        # map point to index
+        self.points_to_index = {}
+
         for _ in range(l):
             # list of hashes
             f_list = [LSH(input_dim, bucket_size, seed) for j in range(k)]
@@ -100,7 +103,8 @@ class KNN:
         '''
         Preprocess a set of points into the hash table.
         '''
-        for point in points:
+        for i, point in enumerate(points):
+            points_to_index[tuple(point)] = i
             for i in range(self.l):
                 g_hash = self._g(i, point)
                 self.hash_table[i][g_hash].append(tuple(point))
@@ -109,9 +113,41 @@ class KNN:
         '''
         Collect set of points with same hash value as query point for any choice of g. Return K = num_neighbors closest points.
         '''
-
         candidates = self._get_candidates(point)
 
         args = np.argsort([np.linalg.norm(c - point) for c in candidates])[:num_neighbors]
 
         return candidates[args]
+
+    
+    def construct_knng(self, points, num_neighbors):
+        '''
+        Construct a KNN graph from the hash table.
+        '''
+        knn_graph = defaultdict(list)
+
+        for i in range(self.l):
+            for g_hash, points in self.hash_table[i].items():
+                for point in points:
+                    neighbors = self.query(point, num_neighbors + 1)
+                    knn_graph[point].extend(neighbors)
+        
+        return knn_graph
+    
+    def construct_adjacency_matrix(self, points, num_neighbors):
+        '''
+        Construct an adjacency matrix from the hash table.
+        '''
+        self.insert_points(points)
+
+        num_points = len(self.points)
+
+        adjacency_matrix = np.zeros((num_points, num_points))
+
+        for i, point in enumerate(points):
+            neighbors = self.query(point, num_neighbors + 1)
+            neighbor_indices = [self.points_to_index[tuple(n)] for n in neighbors]
+            adjacency_matrix[i, neighbor_indices] = 1
+            adjacency_matrix[neighbor_indices, i] = 1
+        
+        return adjacency_matrix
