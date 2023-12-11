@@ -93,11 +93,12 @@ class KNN:
         '''
         Collect set of points with same hash value as query point for any choice of g. Return K = num_neighbors closest points.
         '''
-        candidates = []
+        candidates = set()
 
         for i in range(self.l):
             g_hash = self._g(i, point)
-            candidates.append(self.hash_table[i].get(g_hash))
+            for p in self.hash_table[i].get(g_hash):
+                candidates.add(p)
         
         args = np.argsort([np.linalg.norm(c - point) for c in candidates])[:num_neighbors]
 
