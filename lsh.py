@@ -77,7 +77,7 @@ class KNN:
         g_hash = [g[i].index(point) for i in range(self.k)]
         g_hash = tuple(g_hash)
 
-        self.hash_table[g_hash].append(tuple(point))
+        self.hash_table[index][g_hash].append(tuple(point))
 
         return g_hash
 
