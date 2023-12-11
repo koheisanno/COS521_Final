@@ -3,7 +3,7 @@ from collections import defaultdict
 
 class LSH:
     '''
-    random projection based locality sensitive hashing.
+    Random projection based locality sensitive hashing.
 
     Attributes:
     - input_dim: the dimension of input data
@@ -30,16 +30,19 @@ class LSH:
         '''
         return self.rng.standard_normal(self.input_dim)
     
-    def _hash(self, point):
+    def hash(self, point):
+        '''
+        Return the hash index of a point.
+        '''
         projection = np.dot(self.projection_line, point)
 
-        return projection // self.bucket_size
+        return 1 if projection >= 0 else 0
     
     def index(self, point):
         '''
         Index a single point. Return the hash index.
         '''
-        hash_index = self._hash(point)
+        hash_index = self.hash(point)
 
         self.hash_table[hash_index].append(tuple(point))
 
@@ -63,7 +66,8 @@ class KNN:
         self.l = l
         self.g_list = []
 
-        for i in range(l):
+        for _ in range(l):
+            # list of hashes
             f_list = [LSH(input_dim, bucket_size, seed) for j in range(k)]
             self.g_list.append(f_list)
 
@@ -74,12 +78,23 @@ class KNN:
         Project a point onto k random lines. Return k-dim hash.
         '''
         g = self.g_list[index]
-        g_hash = [g[i].index(point) for i in range(self.k)]
+        g_hash = [g[i].hash(point) for i in range(self.k)]
         g_hash = tuple(g_hash)
 
-        self.hash_table[index][g_hash].append(tuple(point))
-
         return g_hash
+    
+    def _get_candidates(self, point):
+        candidates = set()
+
+        for i in range(self.l):
+            g_hash = self._g(i, point)
+            for p in self.hash_table[i].get(g_hash):
+                candidates.add(p)
+                # only check max 4l points
+                if len(candidates) >= 4 * self.l:
+                    return np.array(list(candidates))
+        
+        return np.array(list(candidates))
 
     def insert_points(self, points):
         '''
@@ -87,20 +102,15 @@ class KNN:
         '''
         for point in points:
             for i in range(self.l):
-                self._g(i, point)
+                g_hash = self._g(i, point)
+                self.hash_table[i][g_hash].append(tuple(point))
     
     def query(self, point, num_neighbors):
         '''
         Collect set of points with same hash value as query point for any choice of g. Return K = num_neighbors closest points.
         '''
-        candidates = set()
 
-        for i in range(self.l):
-            g_hash = self._g(i, point)
-            for p in self.hash_table[i].get(g_hash):
-                candidates.add(p)
-        
-        candidates = np.array(sorted(candidates))
+        candidates = self._get_candidates(point)
 
         args = np.argsort([np.linalg.norm(c - point) for c in candidates])[:num_neighbors]
 
