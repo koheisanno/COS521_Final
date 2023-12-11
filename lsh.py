@@ -100,8 +100,8 @@ class KNN:
             for p in self.hash_table[i].get(g_hash):
                 candidates.add(p)
         
-        candidates = sorted(candidates)
-        
+        candidates = np.array(sorted(candidates))
+
         args = np.argsort([np.linalg.norm(c - point) for c in candidates])[:num_neighbors]
 
         return candidates[args]
